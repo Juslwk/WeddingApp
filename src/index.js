@@ -28,6 +28,7 @@ import {
   collection,
   addDoc,
   getDoc,
+  getDocs,
   query,
   orderBy,
   limit,
@@ -49,48 +50,57 @@ import { getPerformance } from 'firebase/performance';
 
 import { getFirebaseConfig } from './firebase-config.js';
 
-// Loads guest
-async function loadGuests() {
-
+async function loadInvitation() {
   let value = window.location.href.substring(window.location.href.lastIndexOf('/') + 1)
-
-  console.log(value);
   const db = getFirestore();
-  const docRef = doc(db, "Guest", value);
+  const collectionRef = collection(db, "invitation", value, "guest");
+  const querySnapshot = await getDocs(collectionRef);
+  querySnapshot.forEach((doc) => {
+    // doc.data() is never undefined for query doc snapshots
+    console.log(doc.id, " => ", doc.data());
+    ceremonyDiv.innerHTML += `
+    <div class='ceremony-guest-name'>`+ doc.data().Name +`</div> -
+    <input id='ceremonyCheckBox-`+ doc.id +`' type='checkbox' checked>
+    <label for='ceremonyCheckBox-`+ doc.id +`' class='check-trail'>
+      <span class='check-handler'></span>
+    </label>
+    <div></div>`
 
-  try {
-    const docSnap = await getDoc(docRef);
-    console.log(docSnap.data());
-    document.getElementById("ceremony-guest-name").innerText = docSnap.data().Name;
-    document.getElementById("dinner-guest-name").innerText = docSnap.data().Name;
-  } catch(error) {
-      console.log(error)
-  }
+    dinnerDiv.innerHTML += `
+    <div class='dinner-guest-name'>`+ doc.data().Name +`</div> -
+    <input id='dinnerCheckBox-`+ doc.id +`' type='checkbox' checked>
+    <label for='dinnerCheckBox-`+ doc.id +`' class='check-trail'>
+      <span class='check-handler'></span>
+    </label>
+    <div></div>`
+  });
 }
 
 // Triggered when the send new message form is submitted.
-function onMessageFormSubmit(e) {
+async function onMessageFormSubmit(e) {
   e.preventDefault();
   let value = window.location.href.substring(window.location.href.lastIndexOf('/') + 1)
-
   const db = getFirestore();
-  const docRef = doc(db, "Guest", value);
-
-  var data = {
-    AttendDinner: dinnerElement.checked ? true : false,
-    AttendTeaCeremony: ceremonyElement.checked ? true : false,
-  };
-  
-  updateDoc(docRef, data)
-  .then(docRef => {
-      console.log("Updated document");
-      submitElement.style.display = "none";
-      thankyouElement.style.display = "inherit";
-      questionsElement.style.display = "inherit";
+  const collectionRef = collection(db, "invitation", value, "guest");
+  getDocs(collectionRef)
+  .then(querySnapshot => {
+    querySnapshot.forEach((doc) => {
+      // doc.data() is never undefined for query doc snapshots
+      console.log(doc.id, " => ", doc.data());
+      var ceremonyCheckBox = document.getElementById('ceremonyCheckBox-' + doc.id)
+      var dinnerCheckBox = document.getElementById('dinnerCheckBox-' + doc.id)
+      var data = {
+        AttendTeaCeremony: ceremonyCheckBox.checked ? true : false,
+        AttendDinner: dinnerCheckBox.checked ? true : false,
+      };
+      updateDoc(doc.ref, data);
+    })
   })
-  .catch(error => {
-      console.log(error);
-  })
+  .then(() => {
+    submitElement.style.display = "none";
+    thankyouElement.style.display = "inherit";
+    questionsElement.style.display = "inherit";
+  });
 }
 
 // A loading image URL.
@@ -98,11 +108,11 @@ var LOADING_IMAGE_URL = 'https://www.google.com/images/spin-32.gif?a';
 
 // Shortcuts to DOM Elements.
 var messageFormElement = document.getElementById('message-form');
-var dinnerElement = document.getElementById('dinnerCheckBox');
-var ceremonyElement = document.getElementById('ceremonyCheckBox');
 var thankyouElement = document.getElementById('thankyou');
 var questionsElement = document.getElementById('questions');
 var submitElement = document.getElementById('submit');
+var ceremonyDiv = document.getElementById('ceremony');
+var dinnerDiv = document.getElementById('dinner');
 
 messageFormElement.addEventListener('submit', onMessageFormSubmit);
 
@@ -112,4 +122,4 @@ initializeApp(firebaseAppConfig);
 
 getPerformance();
 
-loadGuests();
+loadInvitation();
