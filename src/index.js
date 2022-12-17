@@ -53,7 +53,7 @@ import { getFirebaseConfig } from './firebase-config.js';
 async function loadInvitation() {
   let value = window.location.href.substring(window.location.href.lastIndexOf('/') + 1)
   const db = getFirestore();
-  const collectionRef = collection(db, "invitation", value, "guest");
+  const collectionRef = collection(db, "invitation", value, "guests");
   const querySnapshot = await getDocs(collectionRef);
   querySnapshot.forEach((doc) => {
     // doc.data() is never undefined for query doc snapshots
@@ -81,7 +81,7 @@ async function onMessageFormSubmit(e) {
   e.preventDefault();
   let value = window.location.href.substring(window.location.href.lastIndexOf('/') + 1)
   const db = getFirestore();
-  const collectionRef = collection(db, "invitation", value, "guest");
+  const collectionRef = collection(db, "invitation", value, "guests");
   getDocs(collectionRef)
   .then(querySnapshot => {
     querySnapshot.forEach((doc) => {
