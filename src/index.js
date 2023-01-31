@@ -36,7 +36,7 @@ import {
   setDoc,
   updateDoc,
   doc,
-  serverTimestamp,
+  Timestamp,
   where,
 } from 'firebase/firestore';
 import {
@@ -51,29 +51,63 @@ import { getPerformance } from 'firebase/performance';
 import { getFirebaseConfig } from './firebase-config.js';
 
 async function loadInvitation() {
-  let value = window.location.href.substring(window.location.href.lastIndexOf('/') + 1)
-  const db = getFirestore();
-  const collectionRef = collection(db, "invitation", value, "guests");
-  const querySnapshot = await getDocs(collectionRef);
-  querySnapshot.forEach((doc) => {
-    // doc.data() is never undefined for query doc snapshots
-    console.log(doc.id, " => ", doc.data());
-    ceremonyDiv.innerHTML += `
-    <div class='ceremony-guest-name'>`+ doc.data().Name +`</div> -
-    <input id='ceremonyCheckBox-`+ doc.id +`' type='checkbox' checked>
-    <label for='ceremonyCheckBox-`+ doc.id +`' class='check-trail'>
-      <span class='check-handler'></span>
-    </label>
-    <div></div>`
+  let value = window.location.href.substring(window.location.href.lastIndexOf('/') + 1);
+  if (value)
+  {
+    const db = getFirestore();
 
-    dinnerDiv.innerHTML += `
-    <div class='dinner-guest-name'>`+ doc.data().Name +`</div> -
-    <input id='dinnerCheckBox-`+ doc.id +`' type='checkbox' checked>
-    <label for='dinnerCheckBox-`+ doc.id +`' class='check-trail'>
-      <span class='check-handler'></span>
-    </label>
-    <div></div>`
-  });
+    const invitationRef = doc(db, "invitations", value);
+    const invitationSnap = await getDoc(invitationRef);
+    if (invitationSnap.exists()) {
+      var data = {
+        LastVisitTime: Timestamp.now()
+      };
+      updateDoc(invitationSnap.ref, data);
+
+      var hasSavedBefore = invitationSnap.data().LastSaveTime ? true : false;
+      if (hasSavedBefore)
+      {
+        submitElement.style.display = "none";
+        thankyouElement.style.display = "inherit";
+        questionsElement.style.display = "inherit";
+      }
+
+      var disabledText = hasSavedBefore ? "disabled" : "";
+      var pointerStyleText = hasSavedBefore ? 'style="cursor: default;"' : '';
+
+      const guestCollectionRef = collection(db, "invitations", value, "guests");
+      const querySnapshot = await getDocs(guestCollectionRef);
+      querySnapshot.forEach((doc) => {
+        var ceremonyCheckedText = doc.data().AttendTeaCeremony ? "checked" : "";
+        ceremonyDiv.innerHTML += `
+        <div class='ceremony-guest-name'>`+ doc.data().Name +`</div> -
+        <input id='ceremonyCheckBox-`+ doc.id +`' type='checkbox' `+ ceremonyCheckedText +` ` + disabledText + `>
+        <label for='ceremonyCheckBox-`+ doc.id +`' class='check-trail' `+ pointerStyleText + `>
+          <span class='check-handler'></span>
+        </label>
+        <div></div>`
+    
+        var dinnerCheckedText = doc.data().AttendDinner ? "checked" : "";
+        dinnerDiv.innerHTML += `
+        <div class='dinner-guest-name'>`+ doc.data().Name +`</div> -
+        <input id='dinnerCheckBox-`+ doc.id +`' type='checkbox' `+ dinnerCheckedText + ` ` + disabledText + `>
+        <label for='dinnerCheckBox-`+ doc.id +`' class='check-trail' ` + pointerStyleText + `>
+          <span class='check-handler'></span>
+        </label>
+        <div></div>`
+      });
+
+    } else {
+      console.log("No such document!");
+      messageFormElement.style.display = "none";
+      rsvpImage.style.display = "none";
+    }
+  }
+  else
+  {
+    messageFormElement.style.display = "none";
+    rsvpImage.style.display = "none";
+  }
 }
 
 // Triggered when the send new message form is submitted.
@@ -81,26 +115,51 @@ async function onMessageFormSubmit(e) {
   e.preventDefault();
   let value = window.location.href.substring(window.location.href.lastIndexOf('/') + 1)
   const db = getFirestore();
-  const collectionRef = collection(db, "invitation", value, "guests");
-  getDocs(collectionRef)
-  .then(querySnapshot => {
-    querySnapshot.forEach((doc) => {
-      // doc.data() is never undefined for query doc snapshots
-      console.log(doc.id, " => ", doc.data());
-      var ceremonyCheckBox = document.getElementById('ceremonyCheckBox-' + doc.id)
-      var dinnerCheckBox = document.getElementById('dinnerCheckBox-' + doc.id)
-      var data = {
-        AttendTeaCeremony: ceremonyCheckBox.checked ? true : false,
-        AttendDinner: dinnerCheckBox.checked ? true : false,
-      };
-      updateDoc(doc.ref, data);
+
+  const invitationRef = doc(db, "invitations", value);
+  const invitationSnap = await getDoc(invitationRef);
+
+  if (invitationSnap.exists()) {
+    var data = {
+      LastSaveTime: Timestamp.now()
+    };
+    updateDoc(invitationSnap.ref, data);
+    
+    const guestCollectionRef = collection(db, "invitations", value, "guests");
+    getDocs(guestCollectionRef)
+    .then(querySnapshot => {
+      querySnapshot.forEach((guest) => {
+        console.log(guest.id, " => ", guest.data());
+        var ceremonyCheckBox = document.getElementById('ceremonyCheckBox-' + guest.id)
+        var dinnerCheckBox = document.getElementById('dinnerCheckBox-' + guest.id)
+        var data = {
+          AttendTeaCeremony: ceremonyCheckBox.checked ? true : false,
+          AttendDinner: dinnerCheckBox.checked ? true : false,
+        };
+        updateDoc(guest.ref, data);
+
+        ceremonyCheckBox.disabled = true;
+        dinnerCheckBox.disabled = true;
+      })
     })
-  })
-  .then(() => {
-    submitElement.style.display = "none";
-    thankyouElement.style.display = "inherit";
-    questionsElement.style.display = "inherit";
-  });
+    .then(() => {
+      submitElement.style.display = "none";
+      thankyouElement.style.display = "inherit";
+      questionsElement.style.display = "inherit";
+      var inputCollection = document.getElementsByClassName('check-trail'); 
+      for (let i = 0; i < inputCollection.length; i++) {
+        inputCollection[i].style.cursor = "default";
+      }
+    });
+  }
+  else
+  {
+    console.log("No such document!");
+  }
+}
+
+function myNavFunc(){
+  window.open("https://www.google.com/maps/dir/?api=1&travelmode=driving&layer=traffic&destination=3.148903549120716, 101.82652633088857");
 }
 
 // A loading image URL.
@@ -113,8 +172,11 @@ var questionsElement = document.getElementById('questions');
 var submitElement = document.getElementById('submit');
 var ceremonyDiv = document.getElementById('ceremony');
 var dinnerDiv = document.getElementById('dinner');
+var rsvpImage = document.getElementById('rsvp');
+var venueDiv = document.getElementById('venue');
 
 messageFormElement.addEventListener('submit', onMessageFormSubmit);
+venueDiv.addEventListener('click', myNavFunc);
 
 
 const firebaseAppConfig = getFirebaseConfig();

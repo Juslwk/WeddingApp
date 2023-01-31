@@ -1,6 +1,7 @@
 const { db } = require('../util/admin');
 
 exports.getAllInvitations = (request, response) => {
+    response.set('Access-Control-Allow-Origin', '*');
     return response.json([
         {
           "invitationId": "alistairlim"
@@ -33,6 +34,7 @@ exports.getAllInvitations = (request, response) => {
 };
 
 exports.getAllGuests = (request, response) => {
+    response.set('Access-Control-Allow-Origin', '*');
     return response.json([
         {
           "parentId": "alistairlim",
@@ -77,4 +79,25 @@ exports.getAllGuests = (request, response) => {
 	// 		console.error(err);
 	// 		return response.status(500).json({ error: err.code});
 	// 	});
+};
+
+exports.createInvitations = (request, response) => {
+    var createdGuests = [];
+    request.body.forEach(function(invitation) {
+        invitation.guests.forEach(function(guest) {
+            var guestid = guest.toLowerCase().replace(/\s/g, '');
+            db.collection("invitations").doc(invitation.url).set({});
+            db.collection("invitations").doc(invitation.url).collection("guests").doc(guestid).set({
+                Name: guest
+            })
+            .then((doc)=>{
+                createdGuests.add(doc);
+            })
+            .catch((err) => {
+                response.status(500).json({ error: 'Something went wrong' });
+                console.error(err);
+            });
+        });
+    });
+    return response.json(createdGuests);
 };

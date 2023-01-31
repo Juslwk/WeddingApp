@@ -5,10 +5,12 @@ const app = require('express')();
 
 const {
     getAllInvitations,
-    getAllGuests
+    getAllGuests,
+    createInvitations
 } = require('./APIs/invitations')
 
 app.get('/invitations', getAllInvitations);
 app.get('/guests', getAllGuests);
+app.post('/invitations', createInvitations);
 
 exports.api = functions.https.onRequest(app);
