@@ -175,8 +175,8 @@ var dinnerDiv = document.getElementById('dinner');
 var rsvpImage = document.getElementById('rsvp');
 var venueDiv = document.getElementById('venue');
 
-messageFormElement.addEventListener('submit', onMessageFormSubmit);
-venueDiv.addEventListener('click', myNavFunc);
+// messageFormElement.addEventListener('submit', onMessageFormSubmit);
+// venueDiv.addEventListener('click', myNavFunc);
 
 
 const firebaseAppConfig = getFirebaseConfig();
@@ -184,4 +184,4 @@ initializeApp(firebaseAppConfig);
 
 getPerformance();
 
-loadInvitation();
+// loadInvitation();
